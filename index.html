@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Patreon Scroll (Stable)</title>
+<style>
+  body {
+    margin: 0;
+    overflow: hidden;
+    background: rgba(0,0,0,0);
+    font-family: Arial Black, Arial, sans-serif;
+    font-weight: bold;
+    color: white;
+    white-space: nowrap;
+    text-shadow: 0 0 8px rgba(255,255,255,0.6), 0 0 16px rgba(255,255,255,0.35);
+  }
+
+  #patrons-label {
+    position: absolute;
+    bottom: 400px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 3rem;
+    opacity: 0;
+    transition: opacity 1s ease;
+  }
+
+  #scroll-container {
+    position: absolute;
+    bottom: 40px;
+    left: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    align-items: center;
+    white-space: nowrap;
+  }
+
+  .scroll-line {
+    white-space: nowrap;
+    font-size: 2.6rem;
+    margin-left: 100px;
+  }
+
+  .top-tier {
+    align-self: flex-start;
+    font-size: 4.2rem;
+    margin-bottom: 20px;
+    margin-left: 200px;
+  }
+</style>
+</head>
+<body>
+
+<div id="patrons-label">PODCAST PATRONS</div>
+
+<div id="scroll-container">
+  <div id="line0" class="scroll-line top-tier"></div>
+  <div id="line1" class="scroll-line"></div>
+  <div id="line2" class="scroll-line"></div>
+  <div id="line3" class="scroll-line"></div>
+</div>
+
+<script>
+(async function(){
+  try {
+    // Cache-busting query param: OBS/Chromium will happily serve a stale
+    // cached copy of patrons.csv otherwise, even after GitHub Actions has
+    // pushed a fresh one.
+    const res = await fetch(`patrons.csv?t=${Date.now()}`);
+    if (!res.ok) throw new Error('CSV not found');
+    const text = await res.text();
+
+    const rows = text.split(/\r?\n/).filter(r => r.trim() !== '');
+    const header = rows[0].split(',').map(h => h.trim());
+
+    // EXACT Patreon CSV columns
+    const nameIndex = header.indexOf('Name');
+    const tierIndex = header.indexOf('Tier');
+
+    if (nameIndex === -1 || tierIndex === -1) {
+      throw new Error('Expected columns not found');
+    }
+
+    const tier499 = [];
+    const tier1499 = [];
+
+    rows.slice(1).forEach(r => {
+      const cols = r.split(',');
+      const name = cols[nameIndex]?.trim();
+      const tier = cols[tierIndex]?.trim();
+      if (!name || !tier) return;
+
+      if (tier === 'Super Cool Guy') tier499.push(name);
+      if (tier === 'Mega Cool Guy') tier1499.push(name);
+    });
+
+    const spacing = '\u00A0\u00A0\u00A0\u00A0\u00A0';
+
+    document.getElementById('line0').textContent = tier1499.join(spacing);
+
+    const size = Math.ceil(tier499.length / 3);
+    document.getElementById('line1').textContent = tier499.slice(0, size).join(spacing);
+    document.getElementById('line2').textContent = tier499.slice(size, size * 2).join(spacing);
+    document.getElementById('line3').textContent = tier499.slice(size * 2).join(spacing);
+
+    // Scroll logic (stable)
+    const container = document.getElementById('scroll-container');
+    const line0 = document.getElementById('line0');
+    const label = document.getElementById('patrons-label');
+
+    const windowWidth = window.innerWidth;
+    let left = windowWidth;
+    const baseSpeed = 5;
+
+    const containerWidth = container.offsetWidth;
+    const line0Width = line0.offsetWidth;
+    // Because line0 is centered within the container's width, it doesn't sit
+    // flush against the container's left edge — it's shifted right by this
+    // much at rest. Without correcting for that shift, line0 lands short of
+    // fully exiting, which is why it was pausing/lingering at the end.
+    const line0Offset = line0.offsetLeft;
+
+    const totalDistance = windowWidth + containerWidth;
+    // How much shorter line0's own trip is than the group's trip. This is
+    // what makes it move at a genuinely slower constant speed while still
+    // starting and finishing at the exact same moments.
+    const maxExtra = Math.max(0, containerWidth - line0Width);
+
+    const fadeInMs = 1000;   // how long the label takes to fade in
+    const holdMs = 400;      // pause after fading in, before scrolling starts
+    const fadeOutDelayMs = 400; // pause after scrolling stops, before fading out
+
+    function animate(){
+      left -= baseSpeed;
+      container.style.left = left + 'px';
+
+      // t: 0 at the very start (block fully off-screen right),
+      //    1 at the very end (block fully off-screen left)
+      const t = Math.min(Math.max((windowWidth - left) / totalDistance, 0), 1);
+
+      // extra grows in direct proportion to t — one constant speed for the
+      // whole trip — and is corrected by line0Offset so it actually starts
+      // and finishes fully off-screen in sync with the group.
+      const extra = t * maxExtra - line0Offset;
+
+      line0.style.transform = `translateX(${extra}px)`;
+
+      if (left + containerWidth > 0) {
+        requestAnimationFrame(animate);
+      } else {
+        setTimeout(() => {
+          label.style.opacity = '0';
+        }, fadeOutDelayMs);
+      }
+    }
+
+    // Fade the label in first, then start the scroll once it's visible.
+    container.style.left = left + 'px'; // move off-screen right immediately
+    label.style.opacity = '1';
+    setTimeout(() => {
+      requestAnimationFrame(animate);
+    }, fadeInMs + holdMs);
+
+  } catch (err) {
+    console.error(err);
+  }
+})();
+</script>
+
+</body>
+</html>
