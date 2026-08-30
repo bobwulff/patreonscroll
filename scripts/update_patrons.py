@@ -39,6 +39,7 @@ def get_access_token():
         },
         timeout=30,
     )
+  if not resp.ok: print(f"::error::Patreon token refresh failed ({resp.status_code}): {resp.text}", file=sys.stderr)
     resp.raise_for_status()
     data = resp.json()
 
