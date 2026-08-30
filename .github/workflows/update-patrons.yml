@@ -1,0 +1,43 @@
+name: Update patrons.csv from Patreon
+
+on:
+  schedule:
+    # Runs every 30 minutes. Edit this cron expression to change the
+    # frequency. (GitHub may delay scheduled runs a few minutes during
+    # busy periods — that's normal.)
+    - cron: '*/30 * * * *'
+  workflow_dispatch: {}  # lets you trigger it manually from the Actions tab
+
+permissions:
+  contents: write  # needed so the workflow can commit patrons.csv back
+
+jobs:
+  update-patrons:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Pull latest patrons from Patreon
+        env:
+          PATREON_CLIENT_ID: ${{ secrets.PATREON_CLIENT_ID }}
+          PATREON_CLIENT_SECRET: ${{ secrets.PATREON_CLIENT_SECRET }}
+          PATREON_REFRESH_TOKEN: ${{ secrets.PATREON_REFRESH_TOKEN }}
+          PATREON_CAMPAIGN_ID: ${{ secrets.PATREON_CAMPAIGN_ID }}
+        run: python scripts/update_patrons.py
+
+      - name: Commit and push if patrons.csv changed
+        run: |
+          git config user.name "patreon-scroll-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add patrons.csv
+          git diff --cached --quiet && echo "No changes." || git commit -m "Auto-update patrons.csv"
+          git push
