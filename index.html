@@ -34,12 +34,14 @@
     gap: 18px;
     align-items: center;
     white-space: nowrap;
+    will-change: transform;
   }
 
   .scroll-line {
     white-space: nowrap;
     font-size: 2.6rem;
     margin-left: 100px;
+    will-change: transform;
   }
 
   .top-tier {
@@ -111,7 +113,7 @@
 
     const windowWidth = window.innerWidth;
     let left = windowWidth;
-    const baseSpeed = 5;
+    const baseSpeed = 10; // 2x the original speed
 
     const containerWidth = container.offsetWidth;
     const line0Width = line0.offsetWidth;
@@ -133,7 +135,11 @@
 
     function animate(){
       left -= baseSpeed;
-      container.style.left = left + 'px';
+      // transform instead of the `left` CSS property: `left` forces a full
+      // layout recalculation every frame, which combined with the blurred
+      // text-shadow is expensive enough to cause periodic stutter.
+      // translateX only touches compositing, not layout — much smoother.
+      container.style.transform = `translateX(${left}px)`;
 
       // t: 0 at the very start (block fully off-screen right),
       //    1 at the very end (block fully off-screen left)
@@ -156,7 +162,7 @@
     }
 
     // Fade the label in first, then start the scroll once it's visible.
-    container.style.left = left + 'px'; // move off-screen right immediately
+    container.style.transform = `translateX(${left}px)`; // move off-screen right immediately
     label.style.opacity = '1';
     setTimeout(() => {
       requestAnimationFrame(animate);
