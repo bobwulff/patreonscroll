@@ -39,7 +39,11 @@ def get_access_token():
         },
         timeout=30,
     )
-  if not resp.ok: print(f"::error::Patreon token refresh failed ({resp.status_code}): {resp.text}", file=sys.stderr)
+    if not resp.ok:
+        # Patreon includes a specific reason (invalid_client, invalid_grant,
+        # etc.) in the response body that requests' default error message
+        # doesn't show. Print it so failures are actually diagnosable.
+        print(f"::error::Patreon token refresh failed ({resp.status_code}): {resp.text}", file=sys.stderr)
     resp.raise_for_status()
     data = resp.json()
 
