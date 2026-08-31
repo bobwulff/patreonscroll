@@ -32,6 +32,7 @@ jobs:
           PATREON_CLIENT_SECRET: ${{ secrets.PATREON_CLIENT_SECRET }}
           PATREON_REFRESH_TOKEN: ${{ secrets.PATREON_REFRESH_TOKEN }}
           PATREON_CAMPAIGN_ID: ${{ secrets.PATREON_CAMPAIGN_ID }}
+          GH_PAT: ${{ secrets.GH_PAT }}
         run: python scripts/update_patrons.py
 
       - name: Commit and push if patrons.csv changed
