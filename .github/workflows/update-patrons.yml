@@ -2,10 +2,10 @@ name: Update patrons.csv from Patreon
 
 on:
   schedule:
-    # Runs every 30 minutes. Edit this cron expression to change the
-    # frequency. (GitHub may delay scheduled runs a few minutes during
-    # busy periods — that's normal.)
-    - cron: '*/30 * * * *'
+    # Runs once a day at 09:00 UTC. Edit this cron expression to change
+    # the time/frequency. (GitHub may delay scheduled runs a few minutes
+    # during busy periods — that's normal.)
+    - cron: '0 9 * * *'
   workflow_dispatch: {}  # lets you trigger it manually from the Actions tab
 
 permissions:
